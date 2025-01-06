@@ -1,9 +1,17 @@
 import sys
 import string
 
+class Vocab:
+    def __init__(self, word_count_threshold: int = 10) -> None:
+        self.word_count_threshold: int = word_count_threshold
+        self.word_vocab: list[str] = []
+        self.word_to_index: dict[str, int] = {}
+
+    def __len__(self) -> int:
+        return len(self.word_vocab)
 
 class Helper:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def clean_string(self, original_string: str) -> str:
@@ -64,6 +72,34 @@ class Helper:
 
         return new_captions_dict
 
+    def build_vocab(self, processed_caption: dict[str, list[str]], word_count_threshold: int = 10) -> Vocab:
+        word_count_dict: dict[str, int] = {}
+        for _, captions_list in processed_caption.items():
+            captions_list: list[str]
+            for captions in captions_list:
+                captions: str
+                for word in captions.split():
+                    word: str
+                    if word not in word_count_dict:
+                        word_count_dict[word] = 1
+                    else: word_count_dict[word] += 1
+
+        word_index: int = 0
+        word_vocab: list[str] = []
+        word_to_index: dict[str, int] = {}
+        for word, count in word_count_dict.items():
+            if count >= word_count_threshold:
+                word_vocab.append(word)
+                word_to_index[word] = word_index
+
+        vocab = Vocab(word_count_threshold=word_count_threshold)
+        vocab.word_vocab = word_vocab
+        vocab.word_to_index = word_to_index
+
+        return vocab
+
+
+
 
 """
     [TEST]
@@ -95,4 +131,12 @@ class Helper:
         "white dog playing with red ball on the shore near the water",
         "white dog with brown ears standing near water with head turned to one side",
     ]
+
+    [TEST]
+    vocab = Helper().build_vocab(processed_caption, word_count_threshold=10)
+
+    print(len(vocab))
+
+    [RESULT]
+    1839
 """
