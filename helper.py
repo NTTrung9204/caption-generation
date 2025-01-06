@@ -1,5 +1,7 @@
 import sys
 import string
+import random
+
 
 class Vocab:
     def __init__(self, word_count_threshold: int = 10) -> None:
@@ -9,6 +11,7 @@ class Vocab:
 
     def __len__(self) -> int:
         return len(self.word_vocab)
+
 
 class Helper:
     def __init__(self) -> None:
@@ -72,7 +75,9 @@ class Helper:
 
         return new_captions_dict
 
-    def build_vocab(self, processed_caption: dict[str, list[str]], word_count_threshold: int = 10) -> Vocab:
+    def build_vocab(
+        self, processed_caption: dict[str, list[str]], word_count_threshold: int = 10
+    ) -> Vocab:
         word_count_dict: dict[str, int] = {}
         for _, captions_list in processed_caption.items():
             captions_list: list[str]
@@ -82,7 +87,8 @@ class Helper:
                     word: str
                     if word not in word_count_dict:
                         word_count_dict[word] = 1
-                    else: word_count_dict[word] += 1
+                    else:
+                        word_count_dict[word] += 1
 
         word_index: int = 0
         word_vocab: list[str] = []
@@ -98,6 +104,34 @@ class Helper:
 
         return vocab
 
+    def get_dataset_size(self, data_set: dict[str, list[str]], vocab: Vocab) -> int:
+        dataset_size = 0
+        for _, captions_list in data_set.items():
+            captions_list: list[str]
+            for captions in captions_list:
+                captions: str
+                for word in captions.split():
+                    word: str
+                    if word in vocab.word_vocab:
+                        dataset_size += 1
+        return dataset_size
+
+    def split_dataset(
+        self, processed_caption: dict[str, list[str]], val_size: int, test_size: int
+    ) -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[str]]]:
+        image_name_list: list[str] = list(processed_caption.keys())
+        random.seed(43)
+        random.shuffle(image_name_list)
+
+        val_image_name_list: list[str] = image_name_list[:val_size]
+        test_image_name_list: list[str] = image_name_list[val_size : val_size + test_size]
+        train_image_name_list: list[str] = image_name_list[val_size + test_size:]
+
+        val_set: dict[str, list[str]] = {image_name: processed_caption[image_name] for image_name in val_image_name_list}
+        test_set: dict[str, list[str]] = {image_name: processed_caption[image_name] for image_name in test_image_name_list}
+        train_set: dict[str, list[str]] = {image_name: processed_caption[image_name] for image_name in train_image_name_list}
+
+        return train_set, val_set, test_set
 
 
 
@@ -139,4 +173,47 @@ class Helper:
 
     [RESULT]
     1839
+
+    [TEST]
+    dataset_size = Helper().get_dataset_size(processed_caption, vocab)
+
+    print(dataset_size)
+
+    val_size = int(len(processed_caption) * 0.1)
+    test_size = int(len(processed_caption) * 0.1)
+
+    print(val_size, test_size)
+
+    train_set, val_set, test_set = Helper().split_dataset(processed_caption, val_size, test_size)
+    print(Helper().get_dataset_size(train_set, vocab))
+    print(Helper().get_dataset_size(val_set, vocab))
+    print(Helper().get_dataset_size(test_set, vocab))
+
+    [RESULT]
+    val_size_image: 809, test_size_image: 809
+    train_set_size: 285390
+    val_set_size: 35371
+    test_set_size: 35833
 """
+
+pathname = "dataset/captions.txt"
+
+captions = Helper().load_captions(pathname)
+
+processed_caption = Helper().captions_processing(captions)
+
+vocab = Helper().build_vocab(processed_caption, word_count_threshold=10)
+
+dataset_size = Helper().get_dataset_size(processed_caption, vocab)
+
+print(dataset_size)
+
+val_size = int(len(processed_caption) * 0.1)
+test_size = int(len(processed_caption) * 0.1)
+
+print(val_size, test_size)
+
+train_set, val_set, test_set = Helper().split_dataset(processed_caption, val_size, test_size)
+print(Helper().get_dataset_size(train_set, vocab))
+print(Helper().get_dataset_size(val_set, vocab))
+print(Helper().get_dataset_size(test_set, vocab))
