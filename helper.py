@@ -1,7 +1,8 @@
 import sys
 import string
 import random
-
+from keras.preprocessing.sequence import pad_sequences # type: ignore
+from keras.utils import to_categorical # type: ignore
 
 class Vocab:
     def __init__(self, word_count_threshold: int = 10) -> None:
@@ -10,7 +11,7 @@ class Vocab:
         self.word_to_index: dict[str, int] = {}
 
     def __len__(self) -> int:
-        return len(self.word_vocab)
+        return len(self.word_vocab) + 1
 
 
 class Helper:
@@ -68,6 +69,7 @@ class Helper:
                 words_list = [word for word in words_list if len(word) > 1]
                 words_list = [word for word in words_list if word.isalpha()]
                 caption_compile: str = " ".join(words_list)
+                caption_compile = f"startseq {caption_compile} endseq"
 
                 if image_name not in new_captions_dict:
                     new_captions_dict[image_name] = []
@@ -97,24 +99,40 @@ class Helper:
             if count >= word_count_threshold:
                 word_vocab.append(word)
                 word_to_index[word] = word_index
+                word_index += 1
 
         vocab = Vocab(word_count_threshold=word_count_threshold)
         vocab.word_vocab = word_vocab
         vocab.word_to_index = word_to_index
 
         return vocab
+    
+    def calculate_max_length(self, data_set: dict[str, list[str]]):
+        all_captions: list[str] = []
+        for image_name in data_set.keys():
+            [all_captions.append(caption) for caption in data_set[image_name]]
+        return max(len(caption.split()) for caption in all_captions)
 
-    def get_dataset_size(self, data_set: dict[str, list[str]], vocab: Vocab) -> int:
-        dataset_size = 0
-        for _, captions_list in data_set.items():
+    def generate_dataset_structure(self, data_set: dict[str, list[str]], vocab: Vocab) -> int:
+        X1: list[str] = []
+        X2: list[str] = []
+        Y: list[str] = []
+        max_length = self.calculate_max_length(data_set)
+        for image_name, captions_list in data_set.items():
+            image_name: str
             captions_list: list[str]
             for captions in captions_list:
                 captions: str
-                for word in captions.split():
-                    word: str
-                    if word in vocab.word_vocab:
-                        dataset_size += 1
-        return dataset_size
+                seq: list[str] = [vocab.word_to_index[word] for word in captions.split() if word in vocab.word_vocab]
+
+                for index in range(1, len(seq)):
+                    in_seq, out_seq = seq[:index], seq[index]
+
+                    X1.append(image_name)
+                    X2.append(pad_sequences([in_seq], maxlen=max_length)[0])
+                    Y.append(to_categorical([out_seq], num_classes=len(vocab))[0])
+
+        return X1, X2, Y
 
     def split_dataset(
         self, processed_caption: dict[str, list[str]], val_size: int, test_size: int
@@ -185,9 +203,9 @@ class Helper:
     print(val_size, test_size)
 
     train_set, val_set, test_set = Helper().split_dataset(processed_caption, val_size, test_size)
-    print(Helper().get_dataset_size(train_set, vocab))
-    print(Helper().get_dataset_size(val_set, vocab))
-    print(Helper().get_dataset_size(test_set, vocab))
+    print(Helper().generate_dataset_structure(train_set, vocab))
+    print(Helper().generate_dataset_structure(val_set, vocab))
+    print(Helper().generate_dataset_structure(test_set, vocab))
 
     [RESULT]
     val_size_image: 809, test_size_image: 809
@@ -204,16 +222,9 @@ processed_caption = Helper().captions_processing(captions)
 
 vocab = Helper().build_vocab(processed_caption, word_count_threshold=10)
 
-dataset_size = Helper().get_dataset_size(processed_caption, vocab)
+print(Helper().calculate_max_length(processed_caption))
 
-print(dataset_size)
+# X1, X2, Y = Helper().generate_dataset_structure(processed_caption, vocab)
 
-val_size = int(len(processed_caption) * 0.1)
-test_size = int(len(processed_caption) * 0.1)
+# print(Y)
 
-print(val_size, test_size)
-
-train_set, val_set, test_set = Helper().split_dataset(processed_caption, val_size, test_size)
-print(Helper().get_dataset_size(train_set, vocab))
-print(Helper().get_dataset_size(val_set, vocab))
-print(Helper().get_dataset_size(test_set, vocab))
