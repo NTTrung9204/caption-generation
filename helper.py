@@ -3,6 +3,8 @@ import string
 import random
 from keras.preprocessing.sequence import pad_sequences # type: ignore
 from keras.utils import to_categorical # type: ignore
+import torch
+import pickle
 
 class Vocab:
     def __init__(self, word_count_threshold: int = 10) -> None:
@@ -15,8 +17,19 @@ class Vocab:
 
 
 class Helper:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, device: str) -> None:
+        self.device = device
+    
+    def save_features_to_file(self, features: dict, file_path: str):
+        with open(file_path, 'wb') as f:
+            pickle.dump(features, f)
+        print(f"Features saved to {file_path}")
+
+    def load_features_from_file(self, file_path: str) -> dict:
+        with open(file_path, 'rb') as f:
+            features = pickle.load(f)
+        print(f"Features loaded from {file_path}")
+        return features
 
     def clean_string(self, original_string: str) -> str:
         return (
@@ -92,7 +105,7 @@ class Helper:
                     else:
                         word_count_dict[word] += 1
 
-        word_index: int = 0
+        word_index: int = 1
         word_vocab: list[str] = []
         word_to_index: dict[str, int] = {}
         for word, count in word_count_dict.items():
@@ -113,10 +126,10 @@ class Helper:
             [all_captions.append(caption) for caption in data_set[image_name]]
         return max(len(caption.split()) for caption in all_captions)
 
-    def generate_dataset_structure(self, data_set: dict[str, list[str]], vocab: Vocab) -> int:
-        X1: list[str] = []
-        X2: list[str] = []
-        Y: list[str] = []
+    def generate_dataset_structure(self, data_set: dict[str, list[str]], image_encoding: dict[str, torch.Tensor], vocab: Vocab) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
+        X1: list[torch.Tensor] = []
+        X2: list[torch.Tensor] = []
+        Y: list[torch.Tensor] = []
         max_length = self.calculate_max_length(data_set)
         for image_name, captions_list in data_set.items():
             image_name: str
@@ -128,9 +141,17 @@ class Helper:
                 for index in range(1, len(seq)):
                     in_seq, out_seq = seq[:index], seq[index]
 
-                    X1.append(image_name)
-                    X2.append(pad_sequences([in_seq], maxlen=max_length)[0])
-                    Y.append(to_categorical([out_seq], num_classes=len(vocab))[0])
+                    X1.append(torch.tensor(image_encoding[image_name]).to(self.device))
+                    # print(in_seq)
+                    X2.append(torch.tensor(pad_sequences([in_seq], maxlen=max_length)[0]).to(self.device))
+                    # print(X2[-1])
+                    # print(X2[-1].shape)
+                    # n = input()
+                    # print(out_seq)
+                    # print(to_categorical([out_seq], num_classes=len(vocab))[0])
+                    # print(list(to_categorical([out_seq], num_classes=len(vocab))[0]))
+                    # n = input()
+                    Y.append(torch.tensor(to_categorical([out_seq], num_classes=len(vocab))[0]).to(self.device))
 
         return X1, X2, Y
 
@@ -214,15 +235,15 @@ class Helper:
     test_set_size: 35833
 """
 
-pathname = "dataset/captions.txt"
+# pathname = "dataset/captions.txt"
 
-captions = Helper().load_captions(pathname)
+# captions = Helper().load_captions(pathname)
 
-processed_caption = Helper().captions_processing(captions)
+# processed_caption = Helper().captions_processing(captions)
 
-vocab = Helper().build_vocab(processed_caption, word_count_threshold=10)
+# vocab = Helper().build_vocab(processed_caption, word_count_threshold=10)
 
-print(Helper().calculate_max_length(processed_caption))
+# print(Helper().calculate_max_length(processed_caption))
 
 # X1, X2, Y = Helper().generate_dataset_structure(processed_caption, vocab)
 
