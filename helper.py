@@ -106,7 +106,7 @@ class Helper:
                         word_count_dict[word] += 1
 
         word_index: int = 1
-        word_vocab: list[str] = []
+        word_vocab: list[str] = ['']
         word_to_index: dict[str, int] = {}
         for word, count in word_count_dict.items():
             if count >= word_count_threshold:
@@ -131,6 +131,7 @@ class Helper:
         X2: list[torch.Tensor] = []
         Y: list[torch.Tensor] = []
         max_length = self.calculate_max_length(data_set)
+        print("Max length padding: ", max_length)
         for image_name, captions_list in data_set.items():
             image_name: str
             captions_list: list[str]
