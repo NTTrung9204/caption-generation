@@ -5,9 +5,11 @@ This script uses a pretrained model to generate captions for a set of test image
 
 ## Architecture.
 There are two fundamental approaches to inputting for image captioning: Injection Architecture and Merging Architecture:
+
 ![image](https://github.com/user-attachments/assets/0ac245aa-8495-426a-bdcf-d4fefe43f4e1)
 
 Merging Architecture is used here:
+
 ![image](https://github.com/user-attachments/assets/bf483e1d-8c94-4058-b4bb-9ad493eaa061)
 
 ## CNN Model.
