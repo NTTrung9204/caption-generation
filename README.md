@@ -1,6 +1,6 @@
 
 # Project: Image Captioning using Pretrained Model
-## Description:
+## Description.
 This script uses a pretrained model to generate captions for a set of test images. It extracts features using an InceptionV3 model and applies a Caption Generation Network (CGN) to generate descriptive captions.
 
 ## Architecture.
